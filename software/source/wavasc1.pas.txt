@@ -1,0 +1,193 @@
+program
+  wavasc1;
+  { Program to convert a wave file to an ascii text file.
+    Tjalling Nijboer, 12 april 2006. }
+
+uses
+  dos, crt;
+
+const
+  { Program flow control constants }
+  ENTER = 13; {accept and continue}
+  CTRLX = 24; {abort program}
+
+var
+  progcontrol     : integer; {program flow control variable}
+  sample          : integer; {wav sample variable}
+  counter         : longint;
+  numsamples      : longint; {number of samples}
+  subchunk2size0w : word; {for type conversion}
+  subchunk2size1w : word; {for type conversion}
+
+  { File declarations }
+  infilename    : string;
+  infile        : file of integer;
+  outfilename   : string;
+  outfile       : text;
+
+  { WAV file parameters }
+  chunkid0, chunkid1,
+  chunksize0, chunksize1,
+  format0, format1,
+  subchunk1id0, subchunk1id1,
+  subchunk1size0, subchunk1size1,
+  audioformat,
+  numchannels,
+  samplerate0, samplerate1,
+  byterate0, byterate1,
+  blockalign,
+  bitspersample,
+  subchunk2id0, subchunk2id1,
+  subchunk2size0, subchunk2size1 : integer;
+
+label
+  { Labels for program control }
+  p1, {Prepare infile}
+  p2, {Prepare outfile}
+  c1, {Convert}
+  e1; {End}
+
+begin {of main program}
+
+  { Screen header }
+  ClrScr;   TextBackground (1);   TextColor (10);
+  Writeln
+  ('                                                                      ');
+  Writeln
+  (' WAVASC1 / WAV to ASCII converter                                     ');
+  TextBackground (0);   TextColor (7);   Writeln;
+
+p1: { Prepare infile *******************************************************}
+
+  { Get infilename }
+  GotoXY(1,4);   ClrEol;
+  Write (' Input wav filename = ');   Readln (infilename);
+
+  { Open infile for reading }
+  Assign (infile, infilename);
+  {$I-}
+  Reset (infile);
+  {$I+}
+
+  { Check infile for IO errors }
+  if IOResult <> 0 then {an IO error}
+  begin
+    Write (' Input file IO error, [ENTER]=Retry, [CTRLX]=Abort.');
+    repeat progcontrol := Ord(ReadKey)
+    until (progcontrol = ENTER) or (progcontrol = CTRLX);
+    if progcontrol = ENTER then
+    begin   GotoXY(1,5);   ClrEol;   goto p1;   end;
+    if progcontrol = CTRLX then goto e1;
+  end;
+
+  { Check infile for wav errors }
+  progcontrol := 0; {reset error detection to no wav errors}
+
+  Read (infile, chunkid0);
+  if Chr(chunkid0) <> 'R' then progcontrol := 1;
+  Read (infile, chunkid1);
+  if Chr(chunkid1) <> 'F' then progcontrol := 1;
+  Read (infile, chunksize0);
+  Read (infile, chunksize1);
+  Read (infile, format0);
+  if Chr(format0) <> 'W' then progcontrol := 1;
+  Read (infile, format1);
+  if Chr(format1) <> 'V' then progcontrol := 1;
+  Read (infile, subchunk1id0);
+  if Chr(subchunk1id0) <> 'f' then progcontrol := 1;
+  Read (infile, subchunk1id1);
+  if Chr(subchunk1id1) <> 't' then progcontrol := 1;
+  Read (infile, subchunk1size0);
+  if subchunk1size0 <> 16 then progcontrol := 1;
+  Read (infile, subchunk1size1);
+  if subchunk1size1 <> 0 then progcontrol := 1;
+  Read (infile, audioformat);
+  if audioformat <> 1 then progcontrol := 1;
+  Read (infile, numchannels);
+  if numchannels <> 1 then progcontrol := 1;
+  Read (infile, samplerate0);
+  Read (infile, samplerate1);
+  Read (infile, byterate0);
+  Read (infile, byterate1);
+  Read (infile, blockalign);
+  if blockalign <> 2 then progcontrol := 1;
+  Read (infile, bitspersample);
+  if bitspersample <> 16 then progcontrol := 1;
+  Read (infile, subchunk2id0);
+  if Chr(subchunk2id0) <> 'd' then progcontrol := 1;
+  Read (infile, subchunk2id1);
+  if Chr(subchunk2id1) <> 't' then progcontrol := 1;
+
+  { Check wav error detector }
+  if progcontrol <> 0 then {a WAV error}
+  begin
+    Close (infile);
+    Write (' Input file WAV error, [ENTER]=Retry, [CTRLX]=Abort.');
+    repeat progcontrol := Ord(ReadKey)
+    until (progcontrol = ENTER) or (progcontrol = CTRLX);
+    if progcontrol = ENTER then
+    begin   GotoXY(1,5);   ClrEol;   goto p1;   end;
+    if progcontrol = CTRLX then goto e1;
+  end;
+
+  { Number of sample bytes }
+  Read (infile, subchunk2size0);
+  subchunk2size0w := subchunk2size0;
+  Read (infile, subchunk2size1);
+  subchunk2size1w := subchunk2size1;
+
+  numsamples := (subchunk2size0w + subchunk2size1w * 65536) div 2;
+  Writeln;   Writeln (' Number of samples = ', numsamples);
+
+p2: { Prepare outfile ******************************************************}
+
+  { Get outfilename }
+  GotoXY(1,8);   ClrEol;
+  Write (' Output dat filename = ');   Readln (outfilename);
+
+  { Open outfile for writing }
+  Assign (outfile, outfilename);
+  {$I-}
+  Rewrite (outfile);
+  {$I+}
+
+  { Check outfile for IO errors }
+  if IOResult <> 0 then {an IO error}
+  begin
+    Write (' Output file IO error, [ENTER]=Retry, [CTRLX]=Abort.');
+    repeat progcontrol := Ord(ReadKey)
+    until (progcontrol = ENTER) or (progcontrol = CTRLX);
+    if progcontrol = ENTER then
+    begin   GotoXY(1,9);   ClrEol;   goto p2;   end;
+    if progcontrol = CTRLX then
+    begin   Close (infile);   goto e1;   end;
+  end;
+
+c1: { Convert **************************************************************}
+
+  Writeln;   Writeln;   Writeln;
+  Write (' Converting...');
+  for counter := 1 to numsamples do
+  begin
+    Read (infile, sample);
+    Writeln (outfile, sample);
+  end;
+  Write (' ...done.');
+  Close (infile);
+  Close (outfile);
+
+e1: { End ******************************************************************}
+
+  Writeln;   Writeln;   Writeln;   Writeln;
+  if (progcontrol = CTRLX) then {program aborted}
+  begin
+    Write (' Aborted and no data saved, press [ENTER].');
+    repeat until (Ord(ReadKey) = ENTER);
+  end
+  else {program ended succesfully}
+  begin
+    Write (' Finished and data saved, press [ENTER].');
+    repeat until (Ord(ReadKey) = ENTER);
+  end;
+
+end. {of main program ******************************************************}

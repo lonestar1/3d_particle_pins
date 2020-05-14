@@ -1,0 +1,236 @@
+program
+  ascwav1;
+  { Program to convert an ascii text file to a wave file.
+    Tjalling Nijboer, 12 april 2006. }
+
+uses
+  dos, crt;
+
+const
+  { Program flow control constants }
+  ENTER = 13; {accept and continue}
+  CTRLX = 24; {abort program}
+
+var
+  progcontrol     : integer; {program flow control variable}
+  sample          : integer; {wav sample variable}
+  counter         : longint;
+  subchunk2size   : longint;
+  subchunk2size0w : word; {for type conversion}
+  subchunk2size1w : word; {for type conversion}
+  chunksize       : longint;
+  chunksize0w     : word; {for type conversion}
+  chunksize1w     : word; {for type conversion}
+  numsamples      : longint; {number of samples}
+  samplerate      : longint;
+  samplerate0w    : word; {for type conversion}
+  samplerate1w    : word; {for type conversion}
+  byterate        : longint;
+  byterate0w      : word; {for type conversion}
+  byterate1w      : word; {for type conversion}
+
+  { File declarations }
+  infilename    : string;
+  infile        : text;
+  outfilename   : string;
+  outfile       : file of integer;
+
+  { WAV file parameters }
+  chunkid0, chunkid1,
+  chunksize0, chunksize1,
+  format0, format1,
+  subchunk1id0, subchunk1id1,
+  subchunk1size0, subchunk1size1,
+  audioformat,
+  numchannels,
+  samplerate0, samplerate1,
+  byterate0, byterate1,
+  blockalign,
+  bitspersample,
+  subchunk2id0, subchunk2id1,
+  subchunk2size0, subchunk2size1 : integer;
+
+label
+  { Labels for program control }
+  p1, {Prepare infile}
+  p2, {Prepare outfile}
+  c1, {Convert}
+  e1; {End}
+
+begin {of main program}
+
+  { Screen header }
+  ClrScr;   TextBackground (1);   TextColor (10);
+  Writeln
+  ('                                                                      ');
+  Writeln
+  (' ASCWAV1 / ASCII to WAV converter                                     ');
+  TextBackground (0);   TextColor (7);   Writeln;
+
+p1: { Prepare infile *******************************************************}
+
+  { Get infilename }
+  GotoXY(1,4);   ClrEol;
+  Write (' Input dat filename = ');   Readln (infilename);
+
+  { Open infile for reading }
+  Assign (infile, infilename);
+  {$I-}
+  Reset (infile);
+  {$I+}
+
+  { Check infile for IO errors }
+  if IOResult <> 0 then {an IO error}
+  begin
+    Write (' Input file IO error, [ENTER]=Retry, [CTRLX]=Abort.');
+    repeat progcontrol := Ord(ReadKey)
+    until (progcontrol = ENTER) or (progcontrol = CTRLX);
+    if progcontrol = ENTER then
+    begin   GotoXY(1,5);   ClrEol;   goto p1;   end;
+    if progcontrol = CTRLX then goto e1;
+  end;
+
+  { Check number of lines of infile }
+  numsamples := 0;
+  while Eof(infile) = false do
+  begin
+    {$I-}
+    Readln (infile, sample);
+    {$I+}
+
+    { Check infile for DAT errors }
+    if IOResult <> 0 then {a DAT error}
+    begin
+      Write (' Input file DAT error, [ENTER]=Retry, [CTRLX]=Abort.');
+      repeat progcontrol := Ord(ReadKey)
+      until (progcontrol = ENTER) or (progcontrol = CTRLX);
+      if progcontrol = ENTER then
+      begin   GotoXY(1,5);   ClrEol;   goto p1;   end;
+      if progcontrol = CTRLX then    Close (infile);   goto e1;
+    end;
+
+    numsamples := numsamples + 1;
+  end;
+  Writeln;   Writeln (' Number of samples = ', numsamples);
+  Reset (infile);
+
+p2: { Prepare outfile ******************************************************}
+
+  { Get outfilename }
+  GotoXY(1,8);   ClrEol;
+  Write (' Output wav filename = ');   Readln (outfilename);
+
+  { Open outfile for writing }
+  Assign (outfile, outfilename);
+  {$I-}
+  Rewrite (outfile);
+  {$I+}
+
+  { Check outfile for IO errors }
+  if IOResult <> 0 then {an IO error}
+  begin
+    Write (' Output file IO error, [ENTER]=Retry, [CTRLX]=Abort.');
+    repeat progcontrol := Ord(ReadKey)
+    until (progcontrol = ENTER) or (progcontrol = CTRLX);
+    if progcontrol = ENTER then
+    begin   GotoXY(1,9);   ClrEol;   goto p2;   end;
+    if progcontrol = CTRLX then
+    begin   Close (infile);   goto e1;   end;
+  end;
+
+c1: { Convert **************************************************************}
+
+  Writeln;   Writeln;   Writeln;
+  Write (' Converting...');
+
+  { Calculate subchunk2size0 and subchunk2size1 }
+  subchunk2size := numsamples * 2;
+  subchunk2size1w := subchunk2size div 65536;
+  subchunk2size0w := subchunk2size - subchunk2size1w * 65536;
+  subchunk2size0 := subchunk2size0w; {type conversion}
+  subchunk2size1 := subchunk2size1w; {type conversion}
+
+  { Calculate chunksize0 and chunksize1 }
+  chunksize := 4 + 8 + 16 + 8 + subchunk2size;
+  chunksize1w := chunksize div 65536;
+  chunksize0w := chunksize - chunksize1w * 65536;
+  chunksize0 := chunksize0w; {type conversion}
+  chunksize1 := chunksize1w; {type conversion}
+
+  { Calculate samplerate }
+  samplerate := 44100;
+  samplerate1w := samplerate div 65536;
+  samplerate0w := samplerate - samplerate1w * 65536;
+  samplerate0 := samplerate0w;
+  samplerate1 := samplerate1w;
+
+  { Calculate byterate }
+  byterate := 2 * 44100;
+  byterate1w := byterate div 65536;
+  byterate0w := byterate - byterate1w * 65536;
+  byterate0 := byterate0w;
+  byterate1 := byterate1w;
+
+  { Write outfile header }
+  chunkid0 := 18770; {'RI'}
+  Write (outfile, chunkid0);
+  chunkid1 := 17990; {'FF'}
+  Write (outfile, chunkid1);
+  Write (outfile, chunksize0);
+  Write (outfile, chunksize1);
+  format0 := 16727; {'WA'}
+  Write (outfile, format0);
+  format1 := 17750; {'VE'}
+  Write (outfile, format1);
+  subchunk1id0 := 28006; {'fm'}
+  Write (outfile, subchunk1id0);
+  subchunk1id1 := 8308; {'t '}
+  Write (outfile, subchunk1id1);
+  subchunk1size0 := 16;
+  Write (outfile, subchunk1size0);
+  subchunk1size1 := 0;
+  Write (outfile, subchunk1size1);
+  audioformat := 1;
+  Write (outfile, audioformat);
+  numchannels := 1;
+  Write (outfile, numchannels);
+  Write (outfile, samplerate0);
+  Write (outfile, samplerate1);
+  Write (outfile, byterate0);
+  Write (outfile, byterate1);
+  blockalign := 2;
+  Write (outfile, blockalign);
+  bitspersample := 16;
+  Write (outfile, bitspersample);
+  subchunk2id0 := 24932; {'da'}
+  Write (outfile, subchunk2id0);
+  subchunk2id1 := 24948; {'ta'}
+  Write (outfile, subchunk2id1);
+  Write (outfile, subchunk2size0);
+  Write (outfile, subchunk2size1);
+
+  { Write outfile samples }
+  for counter := 1 to numsamples do
+  begin
+    Readln (infile, sample);
+    Write (outfile, sample);
+  end;
+  Write (' ...done.');
+  Close (infile);
+  Close (outfile);
+
+e1: { End ******************************************************************}
+
+  Writeln;   Writeln;   Writeln;   Writeln;
+  if (progcontrol = CTRLX) then {program aborted}
+  begin
+    Write (' Aborted and no data saved, press [ENTER].');
+    repeat until (Ord(ReadKey) = ENTER);
+  end
+  else {program ended succesfully}
+  begin
+    Write (' Finished and data saved, press [ENTER].');
+    repeat until (Ord(ReadKey) = ENTER);
+  end;
+
+end. {of main program ******************************************************}

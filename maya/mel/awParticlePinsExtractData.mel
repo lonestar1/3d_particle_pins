@@ -1,0 +1,40 @@
+// Sony Head Transform script for extracting asci data and importing to an animation curve
+// Andreas 2006 v01b
+// www.andreaswanda.com
+
+
+{	
+//Define Path
+string $filepath = "[ADD PATH TO AUDIO FILE]/maya/audio/";
+string $filename = "f8kv3.txt";
+
+// Read Data file
+string $fullname = ($filepath + $filename);
+string $pointLine[];
+int $i = 0;
+float $keypos,$samplevalue;
+
+$fileId=`fopen $fullname "r"`;
+$pointLine[$i] = `fgetline $fileId`;
+print ( $pointLine[$i] + "\n");
+
+//keep reading in data until finished
+while (!`feof $fileId`) 
+{ 
+	$i++;
+	$pointLine[$i] = `fgetline $fileId`;
+	print ($i + "||$i\n");
+
+	$keypos = $i;
+	if($keypos/40 == int($keypos/40))
+	{
+		$samplevalue = $pointLine[$i];
+		print ($i + "||" + $pointLine[$i] + "\n");
+		print ($keypos/320 + "||$keypos\n");
+		setKeyframe -t ($keypos/320) -v $samplevalue "locator1.ty";
+	};
+
+
+};	
+fclose $fileId;
+};

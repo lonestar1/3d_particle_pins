@@ -1,0 +1,99 @@
+Manual for the programs WAVASC1 and ASCWAV1
+=============================================================================
+
+Tjalling Nijboer, 12 april 2006
+
+
+
+0. Introduction
+---------------
+
+WAVASC1 converts ‘basic’ type wav files to ascii files.
+ASCWAV1 converts ascii files back to ‘basic’ type wav files.
+
+A ‘basic’ type wav file is one with only two subchunks,
+a 16 byte ‘fmt’ subchunk and after that a ‘data’ subchunk containing
+the audio samples. Both programs work only with mono 16 bit wav files.
+
+The ascii files contain one sample value per line.
+
+
+
+1. File naming
+--------------
+
+1.1. These are old-fashioned programs so stick to the DOS file naming
+conventions like a maximum of eight characters for file names and
+directory names. The file extention should be three characters long.
+
+1.2. If the input file or the output file is not in the same directory as
+the program than the path must also be specified.
+
+
+
+2. Input wav file
+-----------------
+
+There are two types of errors that can occur concerning the input wav file:
+
+2.1. IO-errors. These are operating system type errors, for example if
+the file you are trying to convert does not exist or can not be found.
+
+2.2. WAV-errors. These are errors concerning the wav format. There are
+three causes that will make the program reject the file you want to convert:
+
+a. It's not a wav file.
+
+b. It is a valid wav file but not the ‘basic type’. The program is simple
+and expects a wav file with only a 16 byte ‘fmt’ chunk followed directly
+by the ‘data’ chunk. If you have problems with this try saving the wav file
+with a ‘simpler’ wav editor.
+
+c. It is a ‘basic’ type wav file but it is not mono or it is not 16 bits
+per sample.
+
+
+
+3. Input dat file
+-----------------
+There are two types of errors that can occur concerning the input dat file:
+
+3.1. IO-errors. These are operating system type errors, for example if
+the file you are trying to convert does not exist or can not be found.
+
+3.2. DAT-errors. These are errors concerning the dat file format. The
+input ascii file must be in the form of a single column of sample values
+in the range -32768...32767 (integer) separated by carriage returns.
+
+
+
+4. Output file
+--------------
+
+4.1. These programs do not check whether or not the output file already
+exists. If the given file name already exists it will be overwritten.
+
+4.2. The file extention for both types of file can be chosen freely.
+
+
+
+5. File sizes
+-------------
+
+5.1. The sample counters of these programs are long integers which count
+from one upwards. The maximum positive value of a long integer is
+2,147,483,647.
+
+5.2. An ascii file will be larger than the corresponding wav file.
+A 16 bit signed sample uses up two bytes in a wav file and the corresponding
+decimal values will be in the range -32768...32767. In an ascii file every
+character use up one byte so a positive sample value will consume six bytes
+and a negative sample value will consume five bytes. A ‘normal’ wav file
+will contain about equal numbers of positive and negative sample values.
+So going from wav to ascii should increase the file size by about 5.5 bytes
+per 2 bytes or something like a factor 3.
+
+
+
+=============================================================================
+End.
